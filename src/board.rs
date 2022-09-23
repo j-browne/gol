@@ -23,6 +23,21 @@ impl Board {
     }
 
     #[must_use]
+    pub fn resize(&self, width: usize, height: usize) -> Self {
+        let mut new = Self::new(width, height);
+        let [width, height] = [
+            usize::min(width, self.size[0]),
+            usize::min(height, self.size[1]),
+        ];
+        for y in 0..height {
+            for x in 0..width {
+                new[(y, x)] = self[(y, x)];
+            }
+        }
+        new
+    }
+
+    #[must_use]
     pub fn size(&self) -> &[usize; 2] {
         &self.size
     }

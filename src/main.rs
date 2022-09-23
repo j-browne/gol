@@ -16,6 +16,8 @@ struct Stage {
     egui_mq: egui_mq::EguiMq,
     filename: String,
     edit_mode: bool,
+    resize: Option<[String; 2]>,
+    resize_warning: bool,
     board: Option<Board>,
 }
 
@@ -26,6 +28,8 @@ impl Stage {
             egui_mq: egui_mq::EguiMq::new(ctx),
             filename: String::new(),
             edit_mode: false,
+            resize: None,
+            resize_warning: false,
             board,
         }
     }
@@ -59,7 +63,7 @@ impl mq::EventHandler for Stage {
                         if let Ok(file) = File::open(&filename) {
                             let file = BufReader::new(file);
                             if let Ok(board) = from_reader(file) {
-                                self.board = Some(board);
+                                self.board.replace(board);
                             } else {
                                 eprintln!("invalid board data in {filename}");
                             }
@@ -68,6 +72,10 @@ impl mq::EventHandler for Stage {
                         }
                     }
                 });
+
+                if ui.button("Resize").clicked() {
+                    self.resize = Some([String::new(), String::new()]);
+                }
             });
 
             egui::TopBottomPanel::bottom("bottom").show(egui_ctx, |ui| {
@@ -90,8 +98,14 @@ impl mq::EventHandler for Stage {
             egui::CentralPanel::default().show(egui_ctx, |ui| {
                 egui::ScrollArea::both().show(ui, |ui| {
                     if let Some(board) = self.board.as_mut() {
-                        let (response, painter) =
-                            ui.allocate_painter(Vec2::splat(300.0), Sense::click());
+                        let (response, painter) = ui.allocate_painter(
+                            #[allow(clippy::cast_precision_loss)]
+                            Vec2::new(
+                                board.size()[0] as f32 * BOARD_SCALE,
+                                board.size()[1] as f32 * BOARD_SCALE,
+                            ),
+                            Sense::click(),
+                        );
                         painter.rect_filled(response.rect, Rounding::none(), Color32::WHITE);
                         let min = response.rect.min;
                         for ((j, i), _) in board.iter().filter(|(_, live)| *live) {
@@ -122,6 +136,43 @@ impl mq::EventHandler for Stage {
                     }
                 });
             });
+
+            let mut close_window = false;
+            if let Some([new_width, new_height]) = self.resize.as_mut() {
+                egui::Window::new("Resize").show(egui_ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.text_edit_singleline(new_width);
+                        ui.text_edit_singleline(new_height);
+                    });
+                    ui.horizontal(|ui| {
+                        if ui.button("Cancel").clicked() {
+                            close_window = true;
+                            self.resize_warning = false;
+                        }
+                        if ui.button("Ok").clicked() {
+                            if let (Ok(w), Ok(h)) =
+                                (new_width.parse::<usize>(), new_height.parse::<usize>())
+                            {
+                                let new_board = self
+                                    .board
+                                    .as_ref()
+                                    .map_or_else(|| Board::new(w, h), |b| b.resize(w, h));
+                                self.board.replace(new_board);
+                                close_window = true;
+                                self.resize_warning = false;
+                            } else {
+                                self.resize_warning = true;
+                            }
+                        }
+                    });
+                    if self.resize_warning {
+                        ui.label("Could not parse dimensions");
+                    }
+                });
+            }
+            if close_window {
+                self.resize = None;
+            }
         });
 
         self.egui_mq.draw(mq_ctx);
