@@ -11,15 +11,18 @@ pub struct Board {
 impl Board {
     #[must_use]
     pub fn new(width: usize, height: usize) -> Self {
-        if let Some(length) = usize::checked_mul(width, height) {
-            let data = vec![false; length];
-            Self {
-                size: [width, height],
-                data,
-            }
-        } else {
-            panic!("board size of `({width}, {height})` is too large");
-        }
+        usize::checked_mul(width, height).map_or_else(
+            || {
+                panic!("board size of `({width}, {height})` is too large");
+            },
+            |length| {
+                let data = vec![false; length];
+                Self {
+                    size: [width, height],
+                    data,
+                }
+            },
+        )
     }
 
     #[must_use]
@@ -38,12 +41,12 @@ impl Board {
     }
 
     #[must_use]
-    pub fn size(&self) -> &[usize; 2] {
+    pub const fn size(&self) -> &[usize; 2] {
         &self.size
     }
 
     #[must_use]
-    pub fn data(&self) -> &Vec<bool> {
+    pub const fn data(&self) -> &Vec<bool> {
         &self.data
     }
 
@@ -92,7 +95,7 @@ impl Board {
 
     #[must_use]
     pub fn next(&self) -> Self {
-        let mut next = Board::new(self.size[0], self.size[1]);
+        let mut next = Self::new(self.size[0], self.size[1]);
         for j in 0..self.size[1] {
             for i in 0..self.size[0] {
                 let live_neighbors = self.live_neighbors((j, i));
@@ -138,7 +141,7 @@ impl IndexMut<(usize, usize)> for Board {
 }
 
 impl From<&Board> for ColorImage {
-    fn from(board: &Board) -> ColorImage {
+    fn from(board: &Board) -> Self {
         let Board { size, data } = board;
         #[allow(clippy::clone_on_copy)]
         let size = size.clone();
@@ -146,7 +149,7 @@ impl From<&Board> for ColorImage {
             .iter()
             .map(|b| if *b { Color32::BLACK } else { Color32::WHITE })
             .collect();
-        ColorImage { size, pixels }
+        Self { size, pixels }
     }
 }
 

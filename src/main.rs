@@ -111,13 +111,13 @@ impl mq::EventHandler for Stage {
                         for ((j, i), _) in board.iter().filter(|(_, live)| *live) {
                             #[allow(clippy::cast_precision_loss)]
                             let pix_min = Pos2 {
-                                x: min.x + BOARD_SCALE * i as f32,
-                                y: min.y + BOARD_SCALE * j as f32,
+                                x: f32::mul_add(BOARD_SCALE, i as f32, min.x),
+                                y: f32::mul_add(BOARD_SCALE, j as f32, min.y),
                             };
                             #[allow(clippy::cast_precision_loss)]
                             let pix_max = Pos2 {
-                                x: min.x + BOARD_SCALE * (i + 1) as f32,
-                                y: min.y + BOARD_SCALE * (j + 1) as f32,
+                                x: f32::mul_add(BOARD_SCALE, (i + 1) as f32, min.x),
+                                y: f32::mul_add(BOARD_SCALE, (j + 1) as f32, min.y),
                             };
                             painter.rect_filled(
                                 Rect::from_two_pos(pix_min, pix_max),
