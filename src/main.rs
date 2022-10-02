@@ -1,6 +1,6 @@
 #![feature(io_read_to_string)]
 
-use egui::{Color32, Pos2, Rect, Rounding, Sense, Vec2};
+use egui::{Color32, Pos2, Rect, Rounding, Sense, TextEdit, Vec2};
 use egui_miniquad as egui_mq;
 use gol::Board;
 use miniquad as mq;
@@ -141,8 +141,16 @@ impl mq::EventHandler for Stage {
             if let Some([new_width, new_height]) = self.resize.as_mut() {
                 egui::Window::new("Resize").show(egui_ctx, |ui| {
                     ui.horizontal(|ui| {
-                        ui.text_edit_singleline(new_width);
-                        ui.text_edit_singleline(new_height);
+                        ui.add(
+                            TextEdit::singleline(new_width)
+                                .hint_text("width")
+                                .desired_width(50.0),
+                        );
+                        ui.add(
+                            TextEdit::singleline(new_height)
+                                .hint_text("height")
+                                .desired_width(50.0),
+                        );
                     });
                     ui.horizontal(|ui| {
                         if ui.button("Cancel").clicked() {
